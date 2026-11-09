@@ -37,7 +37,7 @@ python src/predict.py --data data --models models --date 2026-10-30 --out submis
 python src/score.py --pred submissions/result.csv --truth /path/to/truth.csv
 ```
 
-真值文件由出题方在测试窗口结束后生成，列为 `stock_code,actual_return`，覆盖 300 只股票。`--end` 只影响抓取区间；若先抓了完整数据再指定 `--date`，特征计算仍可能用到 `--date` 之后的价格，因此**必须在截止日当天或之前冻结数据**。
+真值文件由出题方在测试窗口结束后生成，列为 `stock_code,actual_return`，覆盖 300 只股票。`--end` 只影响抓取区间；若先抓了完整数据再指定 `--date`，特征计算仍可能用到 `--date` 之后的价格，因此**必须在 T 日收盘后抓取并冻结，最迟在 T+1 开盘前完成**。若等到 T+1 收盘后再抓，就会把 T+1 的收益带进特征。
 
 其他脚本：
 
@@ -69,7 +69,7 @@ python src/backtest.py --data data --out reports
    python src/fetch_data.py --out data --start 20180101 --end <T>
    ```
 
-   通过标准：`data/meta.json` 中 `failed_codes` 为空，`date_max` 为 T 或 T 之前最近交易日；`universe.csv` 恰好 300 行。任一只股票抓取失败时脚本会直接报错且不写文件，重试即可。**必须在 T 当天或之前执行**；用截止日之后的数据抓取会把未来价格带进特征。
+   通过标准：`data/meta.json` 中 `failed_codes` 为空，`date_max` 为 T 或 T 之前最近交易日；`universe.csv` 恰好 300 行。任一只股票抓取失败时脚本会直接报错且不写文件，重试即可。**必须在 T 日收盘后抓取，最迟在 T+1 开盘前完成**；用截止日之后的数据抓取会把未来价格带进特征。
 
 3. **构建特征**（训练和预测会自动触发，也可单独检查）
 

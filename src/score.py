@@ -61,6 +61,8 @@ def main() -> None:
         raise SystemExit("预测文件需包含 pred_return 列")
     if "actual_return" not in truth.columns:
         raise SystemExit("真值文件需包含 actual_return 列")
+    if len(pred) != len(truth):
+        raise SystemExit(f"预测 {len(pred)} 行、真值 {len(truth)} 行；提交文件必须与股票池一一对应")
     metrics = compute_metrics(pred, truth)
     if args.detail:
         merged = truth.merge(pred, on="stock_code", how="left")
