@@ -1,0 +1,305 @@
+{
+  "period": "2019-2026",
+  "top_n": 30,
+  "overall": {
+    "lightgbm": {
+      "dates": 401,
+      "ic_mean": 0.015977565547221146,
+      "ic_std": 0.14797477917180502,
+      "ic_ir": 0.10797492408264055,
+      "ic_positive_rate": 0.5461346633416458,
+      "long_short_mean": 0.0056014712899923325,
+      "long_short_positive_rate": 0.5660847880299252,
+      "mae_mean": 0.04022803923152873,
+      "direction_accuracy": 0.49370246513206734
+    },
+    "reversal_5d": {
+      "dates": 401,
+      "ic_mean": 0.010898148424017685,
+      "ic_std": 0.18231860722972731,
+      "ic_ir": 0.059775294412411056,
+      "ic_positive_rate": 0.5286783042394015,
+      "long_short_mean": -0.0004205472650937736,
+      "long_short_positive_rate": 0.4937655860349127,
+      "mae_mean": 0.05367211415490456,
+      "direction_accuracy": 0.497046735234673
+    },
+    "ridge": {
+      "dates": 401,
+      "ic_mean": -0.001092403684984617,
+      "ic_std": 0.18815093397869673,
+      "ic_ir": -0.005805996610722664,
+      "ic_positive_rate": 0.49875311720698257,
+      "long_short_mean": 0.003479257458820939,
+      "long_short_positive_rate": 0.5112219451371571,
+      "mae_mean": 0.04080020550852107,
+      "direction_accuracy": 0.4839978752327846
+    }
+  },
+  "by_year": {
+    "lightgbm_2019": {
+      "dates": 51,
+      "ic_mean": -0.04313613928559725,
+      "ic_std": 0.1363198163653967,
+      "ic_ir": -0.3164333728998984,
+      "ic_positive_rate": 0.45098039215686275,
+      "long_short_mean": -0.006057239603251219,
+      "long_short_positive_rate": 0.4117647058823529,
+      "mae_mean": 0.050707850948036294,
+      "direction_accuracy": 0.4573676101398373
+    },
+    "lightgbm_2020": {
+      "dates": 52,
+      "ic_mean": 0.017945949441880486,
+      "ic_std": 0.1079562865409969,
+      "ic_ir": 0.1662334822443659,
+      "ic_positive_rate": 0.5769230769230769,
+      "long_short_mean": 0.005545539315789938,
+      "long_short_positive_rate": 0.6153846153846154,
+      "mae_mean": 0.04461435004853221,
+      "direction_accuracy": 0.5067857339177549
+    },
+    "lightgbm_2021": {
+      "dates": 52,
+      "ic_mean": 0.015269530603633067,
+      "ic_std": 0.13828873964000107,
+      "ic_ir": 0.11041774365276115,
+      "ic_positive_rate": 0.5576923076923077,
+      "long_short_mean": 0.005978825967758894,
+      "long_short_positive_rate": 0.5769230769230769,
+      "mae_mean": 0.04501949958114734,
+      "direction_accuracy": 0.5023994111268851
+    },
+    "lightgbm_2022": {
+      "dates": 50,
+      "ic_mean": 0.022461777582099825,
+      "ic_std": 0.21153200052384466,
+      "ic_ir": 0.10618619181246694,
+      "ic_positive_rate": 0.46,
+      "long_short_mean": 0.007719193585216999,
+      "long_short_positive_rate": 0.48,
+      "mae_mean": 0.038133785506586776,
+      "direction_accuracy": 0.4748222085557254
+    },
+    "lightgbm_2023": {
+      "dates": 50,
+      "ic_mean": 0.021993913225418757,
+      "ic_std": 0.11809892951622517,
+      "ic_ir": 0.18623296007435103,
+      "ic_positive_rate": 0.58,
+      "long_short_mean": 0.008218258619308472,
+      "long_short_positive_rate": 0.64,
+      "mae_mean": 0.032211540066523936,
+      "direction_accuracy": 0.49173520347998234
+    },
+    "lightgbm_2024": {
+      "dates": 51,
+      "ic_mean": 0.012018298477299169,
+      "ic_std": 0.1369984705746862,
+      "ic_ir": 0.08772578574698221,
+      "ic_positive_rate": 0.5098039215686274,
+      "long_short_mean": 0.004993361420929432,
+      "long_short_positive_rate": 0.5882352941176471,
+      "mae_mean": 0.037576213936129484,
+      "direction_accuracy": 0.5129659516914419
+    },
+    "lightgbm_2025": {
+      "dates": 53,
+      "ic_mean": 0.05332746935505246,
+      "ic_std": 0.12240859514303483,
+      "ic_ir": 0.4356513469723196,
+      "ic_positive_rate": 0.6792452830188679,
+      "long_short_mean": 0.01180267333984375,
+      "long_short_positive_rate": 0.6226415094339622,
+      "mae_mean": 0.03290753331752703,
+      "direction_accuracy": 0.5103257043867403
+    },
+    "lightgbm_2026": {
+      "dates": 42,
+      "ic_mean": 0.02899210207377307,
+      "ic_std": 0.1849196015202962,
+      "ic_ir": 0.1567822006721715,
+      "ic_positive_rate": 0.5476190476190477,
+      "long_short_mean": 0.006637300830334425,
+      "long_short_positive_rate": 0.5952380952380952,
+      "mae_mean": 0.040634064226732415,
+      "direction_accuracy": 0.49130753304666347
+    },
+    "reversal_5d_2019": {
+      "dates": 51,
+      "ic_mean": 0.018382830893636855,
+      "ic_std": 0.16005655867089516,
+      "ic_ir": 0.11485209382412898,
+      "ic_positive_rate": 0.5686274509803921,
+      "long_short_mean": 0.003114580176770687,
+      "long_short_positive_rate": 0.45098039215686275,
+      "mae_mean": 0.05174523854956908,
+      "direction_accuracy": 0.49234702366295585
+    },
+    "reversal_5d_2020": {
+      "dates": 52,
+      "ic_mean": -0.0026354249298987855,
+      "ic_std": 0.170778336218048,
+      "ic_ir": -0.015431845679383493,
+      "ic_positive_rate": 0.5,
+      "long_short_mean": -0.004099403042346239,
+      "long_short_positive_rate": 0.4807692307692308,
+      "mae_mean": 0.06021667909450256,
+      "direction_accuracy": 0.5122261167715458
+    },
+    "reversal_5d_2021": {
+      "dates": 52,
+      "ic_mean": 0.027041601516612192,
+      "ic_std": 0.1499915591719044,
+      "ic_ir": 0.18028748861540922,
+      "ic_positive_rate": 0.5961538461538461,
+      "long_short_mean": 0.0018262676894664764,
+      "long_short_positive_rate": 0.5961538461538461,
+      "mae_mean": 0.06105338094326166,
+      "direction_accuracy": 0.508027982813574
+    },
+    "reversal_5d_2022": {
+      "dates": 50,
+      "ic_mean": -0.0005808408208003634,
+      "ic_std": 0.21291424357534253,
+      "ic_ir": -0.002728050557100588,
+      "ic_positive_rate": 0.52,
+      "long_short_mean": 0.003960007335990667,
+      "long_short_positive_rate": 0.54,
+      "mae_mean": 0.05263628788292408,
+      "direction_accuracy": 0.493725894085217
+    },
+    "reversal_5d_2023": {
+      "dates": 50,
+      "ic_mean": -0.0018752702904968332,
+      "ic_std": 0.1636767835907153,
+      "ic_ir": -0.011457155067184553,
+      "ic_positive_rate": 0.44,
+      "long_short_mean": -0.0040179528295993805,
+      "long_short_positive_rate": 0.44,
+      "mae_mean": 0.04525965429842472,
+      "direction_accuracy": 0.4972443058596276
+    },
+    "reversal_5d_2024": {
+      "dates": 51,
+      "ic_mean": 0.0203296195669772,
+      "ic_std": 0.20858130827728172,
+      "ic_ir": 0.09746616192449813,
+      "ic_positive_rate": 0.5098039215686274,
+      "long_short_mean": 0.002688475651666522,
+      "long_short_positive_rate": 0.5490196078431373,
+      "mae_mean": 0.05588145258233828,
+      "direction_accuracy": 0.4935514837475622
+    },
+    "reversal_5d_2025": {
+      "dates": 53,
+      "ic_mean": 0.025627164782661457,
+      "ic_std": 0.18889534505975594,
+      "ic_ir": 0.13566858820451322,
+      "ic_positive_rate": 0.5283018867924528,
+      "long_short_mean": -0.003573164576664567,
+      "long_short_positive_rate": 0.4528301886792453,
+      "mae_mean": 0.04656602111908625,
+      "direction_accuracy": 0.5011769802196547
+    },
+    "reversal_5d_2026": {
+      "dates": 42,
+      "ic_mean": -0.002588876568702838,
+      "ic_std": 0.20667068031811522,
+      "ic_ir": -0.012526578829265682,
+      "ic_positive_rate": 0.5714285714285714,
+      "long_short_mean": -0.0036694577429443598,
+      "long_short_positive_rate": 0.42857142857142855,
+      "mae_mean": 0.056302789953492936,
+      "direction_accuracy": 0.47311461485374523
+    },
+    "ridge_2019": {
+      "dates": 51,
+      "ic_mean": -0.020144415033989838,
+      "ic_std": 0.1533259188633415,
+      "ic_ir": -0.1313829728419527,
+      "ic_positive_rate": 0.47058823529411764,
+      "long_short_mean": -0.00319519080221653,
+      "long_short_positive_rate": 0.39215686274509803,
+      "mae_mean": 0.05513465400858253,
+      "direction_accuracy": 0.4413292268290648
+    },
+    "ridge_2020": {
+      "dates": 52,
+      "ic_mean": -0.00392711571560793,
+      "ic_std": 0.11282839025594787,
+      "ic_ir": -0.03480609540470606,
+      "ic_positive_rate": 0.5,
+      "long_short_mean": -0.0006805383018217981,
+      "long_short_positive_rate": 0.4423076923076923,
+      "mae_mean": 0.044348005671054125,
+      "direction_accuracy": 0.505041993054289
+    },
+    "ridge_2021": {
+      "dates": 52,
+      "ic_mean": 0.02780403423304996,
+      "ic_std": 0.15521211983710897,
+      "ic_ir": 0.17913571609117612,
+      "ic_positive_rate": 0.6346153846153846,
+      "long_short_mean": 0.003106204094365239,
+      "long_short_positive_rate": 0.6346153846153846,
+      "mae_mean": 0.0454186900303914,
+      "direction_accuracy": 0.48998699377049615
+    },
+    "ridge_2022": {
+      "dates": 50,
+      "ic_mean": 1.4816987948056415e-05,
+      "ic_std": 0.21876748193088416,
+      "ic_ir": 6.77293892916754e-05,
+      "ic_positive_rate": 0.48,
+      "long_short_mean": 0.005073650274425745,
+      "long_short_positive_rate": 0.5,
+      "mae_mean": 0.03783145885914564,
+      "direction_accuracy": 0.4764600533986075
+    },
+    "ridge_2023": {
+      "dates": 50,
+      "ic_mean": -0.03367928051852205,
+      "ic_std": 0.1622175310387365,
+      "ic_ir": -0.20761800714671003,
+      "ic_positive_rate": 0.42,
+      "long_short_mean": -0.00023689292720519006,
+      "long_short_positive_rate": 0.46,
+      "mae_mean": 0.032566660232841965,
+      "direction_accuracy": 0.4661291230077393
+    },
+    "ridge_2024": {
+      "dates": 51,
+      "ic_mean": -0.026041636223447014,
+      "ic_std": 0.24373441634613927,
+      "ic_ir": -0.10684431281327132,
+      "ic_positive_rate": 0.37254901960784315,
+      "long_short_mean": 0.00387943210080266,
+      "long_short_positive_rate": 0.5098039215686274,
+      "mae_mean": 0.03748203627765179,
+      "direction_accuracy": 0.4999446862191961
+    },
+    "ridge_2025": {
+      "dates": 53,
+      "ic_mean": 0.04049897403583063,
+      "ic_std": 0.1902480782218281,
+      "ic_ir": 0.2128745499789442,
+      "ic_positive_rate": 0.5471698113207547,
+      "long_short_mean": 0.010720347054302692,
+      "long_short_positive_rate": 0.5471698113207547,
+      "mae_mean": 0.03299816522114682,
+      "direction_accuracy": 0.5073471194149933
+    },
+    "ridge_2026": {
+      "dates": 42,
+      "ic_mean": 0.005062203004122327,
+      "ic_std": 0.24090924249653187,
+      "ic_ir": 0.0210129049083503,
+      "ic_positive_rate": 0.5714285714285714,
+      "long_short_mean": 0.010098450817167759,
+      "long_short_positive_rate": 0.6190476190476191,
+      "mae_mean": 0.04049415039342074,
+      "direction_accuracy": 0.4837574985401073
+    }
+  }
+}
