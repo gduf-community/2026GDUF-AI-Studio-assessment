@@ -5,7 +5,9 @@
 """
 from __future__ import annotations
 
+import argparse
 import json
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +22,9 @@ import features as F
 import train as T
 
 TOP_N = 30
+PURGE_DAYS = 5  # 训练样本的标签不能跨入测试年份
+
+warnings.filterwarnings("ignore", message="Skipping features without any observed values")
 
 
 def evaluate(frame: pd.DataFrame, pred: np.ndarray) -> pd.DataFrame:
@@ -61,17 +66,29 @@ def summarize(daily: pd.DataFrame) -> dict:
 
 
 def main() -> None:
-    dataset = F.build_dataset("data", cache=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", default="data")
+    parser.add_argument("--out", default="reports")
+    args = parser.parse_args()
+
+    dataset = F.build_dataset(args.data, cache=True)
     frame, _ = T.training_frame(dataset)
+    calendar = pd.DatetimeIndex(sorted(dataset["date"].unique()))
     years = sorted(frame["date"].dt.year.unique())
     all_daily = []
 
     for year in years:
-        train_frame = frame[frame["date"] < f"{year}-01-01"]
-        test_frame = frame[(frame["date"] >= f"{year}-01-01") & (frame["date"] < f"{year + 1}-01-01")]
+        test_start = pd.Timestamp(f"{year}-01-01")
+        # 只保留 label 的 5 日窗口完全落在测试年之前的样本
+        prior_dates = calendar[calendar < test_start]
+        if len(prior_dates) <= PURGE_DAYS:
+            continue
+        train_cutoff = prior_dates[-1 - PURGE_DAYS]
+        train_frame = frame[frame["date"] <= train_cutoff]
+        test_frame = frame[(frame["date"] >= test_start) & (frame["date"] < f"{year + 1}-01-01")]
         if len(train_frame) < 5000 or len(test_frame) == 0:
             continue
-        print(f"{year}: train={len(train_frame)}, test={len(test_frame)}")
+        print(f"{year}: train={len(train_frame)} (<= {train_cutoff.date()}), test={len(test_frame)}")
 
         lgb_model = T.fit_model(train_frame)
         predictions = {"lightgbm": lgb_model.predict(test_frame[F.MODEL_FEATURES])}
@@ -92,13 +109,14 @@ def main() -> None:
             all_daily.append(daily)
 
     daily = pd.concat(all_daily, ignore_index=True)
-    out = Path("reports")
+    out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     daily.to_csv(out / "backtest_daily.csv", index=False, encoding="utf-8-sig")
 
     summary = {
         "period": f"{int(daily['year'].min())}-{int(daily['year'].max())}",
         "top_n": TOP_N,
+        "purge_days": PURGE_DAYS,
         "overall": {
             name: summarize(group) for name, group in daily.groupby("model")
         },

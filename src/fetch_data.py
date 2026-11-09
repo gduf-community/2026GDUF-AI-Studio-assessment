@@ -116,15 +116,12 @@ def main() -> None:
     universe = fetch_universe()
     if len(universe) != 300:
         raise RuntimeError(f"expected 300 constituents, got {len(universe)}")
-    universe.to_csv(out / "universe.csv", index=False, encoding="utf-8-sig")
     print(f"universe: {len(universe)} stocks")
 
     index = fetch_kline("1.000300", args.start, args.end, fqt=0)
     index.insert(0, "code", "000300")
     index.insert(1, "name", "沪深300")
-    index.to_csv(out / "index.csv", index=False, encoding="utf-8-sig")
     calendar = pd.DataFrame({"trade_date": sorted(index["date"].unique())})
-    calendar.to_csv(out / "calendar.csv", index=False, encoding="utf-8-sig")
     print(f"index rows: {len(index)}, calendar days: {len(calendar)}")
 
     frames, failed = [], []
@@ -150,11 +147,21 @@ def main() -> None:
             if n % 50 == 0:
                 print(f"fetched {n}/{len(futures)} in {time.time() - started:.1f}s")
 
+    if failed:
+        preview = ", ".join(sorted(failed)[:10])
+        raise RuntimeError(
+            f"{len(failed)}/{len(universe)} stocks failed ({preview}); "
+            "no files written, retry later or use --force"
+        )
+
     prices = pd.concat(frames, ignore_index=True)
     for col in ["open", "close", "high", "low", "volume", "amount", "amplitude", "pct_chg", "change", "turnover"]:
         prices[col] = pd.to_numeric(prices[col], errors="coerce")
     prices["date"] = pd.to_datetime(prices["date"]).dt.strftime("%Y-%m-%d")
     prices = prices.sort_values(["code", "date"]).reset_index(drop=True)
+    universe.to_csv(out / "universe.csv", index=False, encoding="utf-8-sig")
+    index.to_csv(out / "index.csv", index=False, encoding="utf-8-sig")
+    calendar.to_csv(out / "calendar.csv", index=False, encoding="utf-8-sig")
     prices.to_csv(out / "prices.csv.gz", index=False, encoding="utf-8-sig", compression="gzip")
 
     meta = {

@@ -134,11 +134,22 @@ def build_features(wide: dict[str, pd.DataFrame], index: pd.DataFrame) -> pd.Dat
     return long
 
 
+def _cache_is_fresh(data_dir: Path, cache_path: Path) -> bool:
+    """缓存早于任一原始文件时失效，避免换了快照却读到旧特征。"""
+    sources = [data_dir / name for name in ("universe.csv", "index.csv", "calendar.csv", "prices.csv.gz")]
+    if not all(src.exists() for src in sources):
+        return False
+    newest = max(src.stat().st_mtime for src in sources)
+    return cache_path.stat().st_mtime >= newest
+
+
 def build_dataset(data_dir: str | Path = "data", cache: bool = True) -> pd.DataFrame:
     data_dir = Path(data_dir)
     cache_path = data_dir / "dataset.pkl"
-    if cache and cache_path.exists():
+    if cache and cache_path.exists() and _cache_is_fresh(data_dir, cache_path):
         return pd.read_pickle(cache_path)
+    if cache and cache_path.exists():
+        print("dataset cache is older than raw data, rebuilding")
     raw = load_data(data_dir)
     calendar = pd.DatetimeIndex(raw["calendar"]["trade_date"].sort_values().unique())
     wide = to_wide(raw["prices"], calendar)
