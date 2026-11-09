@@ -1,0 +1,23 @@
+# 数据快照（自行运行 fetch_data.py 获取，不入库）
+data/
+
+# 训练产物与提交文件
+models/
+submissions/
+
+# 回测明细（指标汇总 reports/backtest_metrics.json 保留）
+reports/*.csv
+reports/*.png
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
