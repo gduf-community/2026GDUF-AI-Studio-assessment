@@ -93,7 +93,7 @@ python src/backtest.py --data data --out reports
    python src/predict.py --data data --models models --date <T> --out submissions/result.csv
    ```
 
-   通过标准：恰好 300 行、代码无重复、无空值；`pred_return` 均值接近 0，标准差约 1%–3%。行数不足通常意味着数据快照缺股票，或 `<T>` 不是交易日。
+   通过标准：恰好 300 行、代码无重复、无空值；`pred_return` 均值接近 0，标准差约 1%–3%。行数不足通常意味着数据快照缺股票，或 `<T>` 不是交易日。预测时会校验模型 `meta.json` 的训练截止日必须早于 T；若复用旧模型（训练标签已包含 T 之后的价格），会直接报错并提示重新训练。
 
 6. **自检**
 

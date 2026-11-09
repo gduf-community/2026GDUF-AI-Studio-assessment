@@ -41,6 +41,17 @@ def main() -> None:
     model = lgb.Booster(model_file=str(Path(args.models) / "lightgbm.txt"))
     features = json.loads((Path(args.models) / "features.json").read_text(encoding="utf-8"))
 
+    meta_path = Path(args.models) / "meta.json"
+    if meta_path.exists():
+        train_end = pd.Timestamp(json.loads(meta_path.read_text(encoding="utf-8"))["train_end"])
+        if train_end >= pd.Timestamp(target):
+            raise SystemExit(
+                f"模型训练截止 {train_end.date()} 不早于预测日 {target}：训练标签已用到预测日之后的价格。"
+                "请用冻结到 T 的数据重新运行 train.py"
+            )
+    else:
+        print("warning: models/meta.json 不存在，无法校验模型训练截止日")
+
     result = predict_for_date(dataset, model, features, target)
     if len(result) != 300:
         missing = 300 - len(result)
