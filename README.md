@@ -27,7 +27,7 @@
 
 ## 环境
 
-Python 3.10+（在 3.12 上验证）：
+Python 3.12（本地与镜像一致）：
 
 ```bash
 pip install -r requirements.txt
@@ -77,7 +77,7 @@ docker run --rm --network none \
   hs300-top5:latest
 
 # 导出提交文件
-docker save hs300-top5:latest -o submissions/team01.tar
+docker save hs300-top5:latest -o team01.tar
 ```
 
 容器约定：
@@ -90,7 +90,7 @@ docker save hs300-top5:latest -o submissions/team01.tar
 主办方批量评测：
 
 ```bash
-python tools/run_container.py --tar submissions/team01.tar \
+python tools/run_container.py --tar team01.tar \
   --data data --output output/team01 --truth .private/truth.csv
 ```
 
