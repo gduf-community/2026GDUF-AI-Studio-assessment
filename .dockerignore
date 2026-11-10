@@ -1,0 +1,12 @@
+data/
+models/
+output/
+reports/
+submissions/
+dist/
+.venv/
+venv/
+.git/
+__pycache__/
+*.py[cod]
+*.tar

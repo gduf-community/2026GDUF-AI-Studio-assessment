@@ -1,6 +1,7 @@
 """特征工程：把日线面板转换为 (date, code) 的横截面样本。
 
-所有特征只使用当日及之前的数据；标签为未来 5 个交易日收益。
+官方快照支持 train.csv.gz（stock_code/date/OHLCV）或旧版 prices.csv.gz。
+所有特征只使用当日及之前的数据；标签为 T+1 开盘到 T+5 开盘的收益。
 """
 from __future__ import annotations
 
@@ -25,18 +26,63 @@ MARKET_FEATURES = ["idx_ret_5", "idx_ret_20", "idx_ret_60", "idx_vol_20", "bread
 CS_BASE = ["ret_1", "ret_5", "ret_20", "ret_60", "vol_20", "rsi_14", "log_amount_20", "turnover_20", "range_pos_20", "dd_60"]
 MODEL_FEATURES = [f for f in FEATURES if f not in MARKET_FEATURES] + [f"cs_{name}" for name in CS_BASE]
 
+ALIASES = {
+    "stock_code": "code", "股票代码": "code",
+    "date": "date", "日期": "date",
+    "open": "open", "开盘": "open",
+    "close": "close", "收盘": "close",
+    "high": "high", "最高": "high",
+    "low": "low", "最低": "low",
+    "volume": "volume", "成交量": "volume",
+    "amount": "amount", "成交额": "amount",
+    "turnover": "turnover", "换手率": "turnover",
+    "stock_name": "name", "名称": "name",
+}
+
+
+def _first_existing(data_dir: Path, names: list[str]) -> Path:
+    for name in names:
+        path = data_dir / name
+        if path.exists():
+            return path
+    raise FileNotFoundError(f"{data_dir} 下缺少数据文件，尝试过 {names}")
+
+
+def _normalize(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.rename(columns={col: ALIASES.get(col, col) for col in df.columns})
+    if "code" in df.columns:
+        df["code"] = df["code"].astype(str).str.zfill(6)
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"])
+    return df
+
 
 def load_data(data_dir: str | Path = "data") -> dict[str, pd.DataFrame]:
     data_dir = Path(data_dir)
-    universe = pd.read_csv(data_dir / "universe.csv", dtype={"code": str})
-    universe["code"] = universe["code"].str.zfill(6)
-    prices = pd.read_csv(data_dir / "prices.csv.gz", dtype={"code": str})
-    prices["code"] = prices["code"].str.zfill(6)
-    prices["date"] = pd.to_datetime(prices["date"])
-    index = pd.read_csv(data_dir / "index.csv", dtype={"code": str})
-    index["date"] = pd.to_datetime(index["date"])
-    calendar = pd.read_csv(data_dir / "calendar.csv")
-    calendar["trade_date"] = pd.to_datetime(calendar["trade_date"])
+    universe = _normalize(pd.read_csv(_first_existing(data_dir, ["universe.csv"])))
+    if "name" not in universe.columns:
+        universe["name"] = universe["code"]
+    prices = _normalize(
+        pd.read_csv(
+            _first_existing(data_dir, ["train.csv.gz", "train.csv", "prices.csv.gz", "prices.csv"]),
+            dtype={"code": str, "stock_code": str},
+        )
+    )
+    prices = prices.sort_values(["code", "date"]).reset_index(drop=True)
+
+    try:
+        index = _normalize(pd.read_csv(_first_existing(data_dir, ["index.csv"])))
+    except FileNotFoundError:
+        # 没有指数文件时，用全池等权收益合成一条市场基准，仅用于 Beta/相关性
+        ret = prices.groupby("code", sort=False)["close"].pct_change(fill_method=None)
+        synthetic = ret.groupby(prices["date"]).mean().fillna(0.0).add(1.0).cumprod() * 1000.0
+        index = pd.DataFrame({"date": synthetic.index, "close": synthetic.values})
+
+    try:
+        calendar = pd.read_csv(data_dir / "calendar.csv")
+        calendar["trade_date"] = pd.to_datetime(calendar["trade_date"])
+    except FileNotFoundError:
+        calendar = pd.DataFrame({"trade_date": sorted(index["date"].unique())})
     return {"universe": universe, "prices": prices, "index": index, "calendar": calendar}
 
 
@@ -61,6 +107,7 @@ def to_wide(prices: pd.DataFrame, calendar: pd.DatetimeIndex) -> dict[str, pd.Da
 
 def build_features(wide: dict[str, pd.DataFrame], index: pd.DataFrame) -> pd.DataFrame:
     close, high, low = wide["close"], wide["high"], wide["low"]
+    open_px = wide["open"].where(wide["open"] > 0)
     volume, amount, turnover = wide["volume"], wide["amount"], wide["turnover"]
     ret = close.pct_change(fill_method=None)
     feats: dict[str, pd.DataFrame] = {}
@@ -119,7 +166,7 @@ def build_features(wide: dict[str, pd.DataFrame], index: pd.DataFrame) -> pd.Dat
     market.index.name = "date"
     long = long.merge(market.reset_index(), on="date", how="left")
 
-    fwd = close.shift(-5) / close - 1.0
+    fwd = open_px.shift(-5) / open_px.shift(-1) - 1.0
     label = fwd.stack(future_stack=True).rename(LABEL).reset_index()
     label.columns = ["date", "code", LABEL]
     long = long.merge(label, on=["date", "code"], how="left")
@@ -134,10 +181,21 @@ def build_features(wide: dict[str, pd.DataFrame], index: pd.DataFrame) -> pd.Dat
     return long
 
 
+DATA_FILES = [
+    "universe.csv",
+    "index.csv",
+    "calendar.csv",
+    "train.csv.gz",
+    "train.csv",
+    "prices.csv.gz",
+    "prices.csv",
+]
+
+
 def _cache_is_fresh(data_dir: Path, cache_path: Path) -> bool:
     """缓存早于任一原始文件时失效，避免换了快照却读到旧特征。"""
-    sources = [data_dir / name for name in ("universe.csv", "index.csv", "calendar.csv", "prices.csv.gz")]
-    if not all(src.exists() for src in sources):
+    sources = [data_dir / name for name in DATA_FILES if (data_dir / name).exists()]
+    if not sources:
         return False
     newest = max(src.stat().st_mtime for src in sources)
     return cache_path.stat().st_mtime >= newest
@@ -156,7 +214,10 @@ def build_dataset(data_dir: str | Path = "data", cache: bool = True) -> pd.DataF
     long = build_features(wide, raw["index"])
     long = long.sort_values(["date", "code"]).reset_index(drop=True)
     if cache:
-        long.to_pickle(cache_path)
+        try:
+            long.to_pickle(cache_path)
+        except OSError:
+            print(f"warning: {cache_path} 不可写，跳过特征缓存（不影响本次运行）")
     return long
 
 

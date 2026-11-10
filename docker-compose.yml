@@ -1,0 +1,14 @@
+services:
+  app:
+    image: hs300-top5:latest
+    build: .
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      DATA_DIR: /app/data
+      MODEL_DIR: /app/models
+      OUTPUT_DIR: /app/output
+    command: ["/bin/bash", "/app/run.sh"]
+    mem_limit: 16g
+    cpus: 8.0

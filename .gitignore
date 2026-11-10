@@ -1,9 +1,13 @@
-# 数据快照（自行运行 fetch_data.py 获取，不入库）
+# 数据快照（官方快照解压到 data/，不入库）
 data/
 
-# 训练产物与提交文件
+# 训练产物、预测输出与提交文件
 models/
+output/*
+!output/.gitkeep
 submissions/
+dist/
+*.tar
 
 # 回测明细（指标汇总 reports/backtest_metrics.json 保留）
 reports/*.csv

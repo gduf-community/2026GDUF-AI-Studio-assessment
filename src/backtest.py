@@ -1,7 +1,7 @@
-"""年度滚动回测：每年只用当年之前的数据训练，预测当年每周截面。
+"""年度滚动回测：每年只用此前数据训练，预测当年每周的 Top5 组合。
 
-输出 reports/backtest_daily.csv 与 reports/backtest_metrics.json。
-这是样本外参考指标，不代表未来测试窗口的真实成绩。
+组合收益按 T+1 开盘买入、T+5 开盘卖出计算，与提交评分口径一致。
+输出 reports/backtest_weekly.csv 与 reports/backtest_metrics.json。
 """
 from __future__ import annotations
 
@@ -12,56 +12,46 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
 import features as F
 import train as T
 
-TOP_N = 30
+TOP_N = 5
 PURGE_DAYS = 5  # 训练样本的标签不能跨入测试年份
 
 warnings.filterwarnings("ignore", message="Skipping features without any observed values")
 
 
-def evaluate(frame: pd.DataFrame, pred: np.ndarray) -> pd.DataFrame:
-    scored = frame[["date", "fwd_ret_5"]].copy()
-    scored["pred"] = pred
-    rows = []
-    for date, group in scored.groupby("date"):
-        group = group.dropna(subset=["pred", "fwd_ret_5"])
-        if len(group) < 50:
-            continue
-        group = group.sort_values("pred")
-        rows.append(
-            {
-                "date": date,
-                "n": len(group),
-                "ic": spearmanr(group["pred"], group["fwd_ret_5"]).statistic,
-                "long_short": group.tail(TOP_N)["fwd_ret_5"].mean()
-                - group.head(TOP_N)["fwd_ret_5"].mean(),
-                "mae": (group["pred"] - group["fwd_ret_5"]).abs().mean(),
-                "direction": (np.sign(group["pred"]) == np.sign(group["fwd_ret_5"])).mean(),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def summarize(daily: pd.DataFrame) -> dict:
-    ic = daily["ic"].astype(float)
+def evaluate_week(frame: pd.DataFrame, scores: np.ndarray, top_n: int = TOP_N) -> dict | None:
+    scored = frame[["date", F.LABEL]].copy()
+    scored["score"] = scores
+    scored = scored.dropna(subset=["score", F.LABEL])
+    if len(scored) < max(50, top_n):
+        return None
+    top = scored.nlargest(top_n, "score")
+    portfolio_return = float(top[F.LABEL].mean())
+    universe_return = float(scored[F.LABEL].mean())
     return {
-        "dates": int(len(daily)),
-        "ic_mean": float(ic.mean()),
-        "ic_std": float(ic.std()),
-        "ic_ir": float(ic.mean() / ic.std()) if ic.std() > 0 else None,
-        "ic_positive_rate": float((ic > 0).mean()),
-        "long_short_mean": float(daily["long_short"].mean()),
-        "long_short_positive_rate": float((daily["long_short"] > 0).mean()),
-        "mae_mean": float(daily["mae"].mean()),
-        "direction_accuracy": float(daily["direction"].mean()),
+        "date": scored["date"].iloc[0],
+        "n": int(len(scored)),
+        "portfolio_return": portfolio_return,
+        "universe_return": universe_return,
+        "excess": portfolio_return - universe_return,
+        "positive": portfolio_return > 0,
+        "beat_universe": portfolio_return > universe_return,
+    }
+
+
+def summarize(weekly: pd.DataFrame) -> dict:
+    return {
+        "weeks": int(len(weekly)),
+        "avg_portfolio_return": float(weekly["portfolio_return"].mean()),
+        "avg_universe_return": float(weekly["universe_return"].mean()),
+        "avg_excess": float(weekly["excess"].mean()),
+        "positive_rate": float(weekly["positive"].mean()),
+        "beat_universe_rate": float(weekly["beat_universe"].mean()),
+        "best_week": float(weekly["portfolio_return"].max()),
+        "worst_week": float(weekly["portfolio_return"].min()),
     }
 
 
@@ -75,11 +65,11 @@ def main() -> None:
     frame, _ = T.training_frame(dataset)
     calendar = pd.DatetimeIndex(sorted(dataset["date"].unique()))
     years = sorted(frame["date"].dt.year.unique())
-    all_daily = []
+    rng = np.random.default_rng(42)
+    all_weekly = []
 
     for year in years:
         test_start = pd.Timestamp(f"{year}-01-01")
-        # 只保留 label 的 5 日窗口完全落在测试年之前的样本
         prior_dates = calendar[calendar < test_start]
         if len(prior_dates) <= PURGE_DAYS:
             continue
@@ -90,39 +80,37 @@ def main() -> None:
             continue
         print(f"{year}: train={len(train_frame)} (<= {train_cutoff.date()}), test={len(test_frame)}")
 
-        lgb_model = T.fit_model(train_frame)
-        predictions = {"lightgbm": lgb_model.predict(test_frame[F.MODEL_FEATURES])}
-
-        ridge = make_pipeline(
-            SimpleImputer(strategy="median"),
-            StandardScaler(),
-            Ridge(alpha=10.0),
-        )
-        ridge.fit(train_frame[F.MODEL_FEATURES], train_frame[F.LABEL].clip(-T.LABEL_CLIP, T.LABEL_CLIP))
-        predictions["ridge"] = ridge.predict(test_frame[F.MODEL_FEATURES])
-        predictions["reversal_5d"] = -test_frame["ret_5"].fillna(0.0).to_numpy()
+        model = T.fit_model(train_frame)
+        predictions = {
+            "lightgbm": model.predict(test_frame[F.MODEL_FEATURES]),
+            "reversal_5d": -test_frame["ret_5"].fillna(0.0).to_numpy(),
+        }
+        random_scores = np.empty(len(test_frame))
+        for date, idx in test_frame.groupby("date").groups.items():
+            random_scores[test_frame.index.get_indexer(idx)] = rng.random(len(idx))
+        predictions["random"] = random_scores
 
         for name, pred in predictions.items():
-            daily = evaluate(test_frame, pred)
-            daily["model"] = name
-            daily["year"] = year
-            all_daily.append(daily)
+            for date, group in test_frame.groupby("date"):
+                row = evaluate_week(group, pred[test_frame.index.isin(group.index)])
+                if row is not None:
+                    row["model"] = name
+                    row["year"] = year
+                    all_weekly.append(row)
 
-    daily = pd.concat(all_daily, ignore_index=True)
+    weekly = pd.DataFrame(all_weekly)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    daily.to_csv(out / "backtest_daily.csv", index=False, encoding="utf-8-sig")
+    weekly.to_csv(out / "backtest_weekly.csv", index=False, encoding="utf-8-sig")
 
     summary = {
-        "period": f"{int(daily['year'].min())}-{int(daily['year'].max())}",
+        "period": f"{int(weekly['year'].min())}-{int(weekly['year'].max())}",
         "top_n": TOP_N,
         "purge_days": PURGE_DAYS,
-        "overall": {
-            name: summarize(group) for name, group in daily.groupby("model")
-        },
+        "overall": {name: summarize(group) for name, group in weekly.groupby("model")},
         "by_year": {
             f"{name}_{year}": summarize(group)
-            for (name, year), group in daily.groupby(["model", "year"])
+            for (name, year), group in weekly.groupby(["model", "year"])
         },
     }
     (out / "backtest_metrics.json").write_text(
