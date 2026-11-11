@@ -2,6 +2,7 @@ services:
   app:
     image: hs300-top5:latest
     build: .
+    platform: linux/amd64
     volumes:
       - ./data:/app/data:ro
       - ./output:/app/output
@@ -11,4 +12,4 @@ services:
       OUTPUT_DIR: /app/output
     command: ["/bin/bash", "/app/run.sh"]
     mem_limit: 16g
-    cpus: 8.0
+    cpus: 10.0

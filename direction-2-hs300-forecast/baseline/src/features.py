@@ -48,10 +48,18 @@ def _first_existing(data_dir: Path, names: list[str]) -> Path:
     raise FileNotFoundError(f"{data_dir} 下缺少数据文件，尝试过 {names}")
 
 
+def _clean_code(series: pd.Series) -> pd.Series:
+    """统一成 6 位数字代码，兼容整数、浮点与带交易所后缀的写法。"""
+    text = series.astype(str).str.strip()
+    text = text.str.replace(r"\.0+$", "", regex=True)
+    text = text.str.replace(r"\.(SZ|SH|BJ)$", "", regex=True, case=False)
+    return text.str.zfill(6)
+
+
 def _normalize(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={col: ALIASES.get(col, col) for col in df.columns})
     if "code" in df.columns:
-        df["code"] = df["code"].astype(str).str.zfill(6)
+        df["code"] = _clean_code(df["code"])
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
     return df
@@ -62,13 +70,23 @@ def load_data(data_dir: str | Path = "data") -> dict[str, pd.DataFrame]:
     universe = _normalize(pd.read_csv(_first_existing(data_dir, ["universe.csv"])))
     if "name" not in universe.columns:
         universe["name"] = universe["code"]
+    universe = universe.drop_duplicates(subset="code").reset_index(drop=True)
+
     prices = _normalize(
         pd.read_csv(
             _first_existing(data_dir, ["train.csv.gz", "train.csv", "prices.csv.gz", "prices.csv"]),
             dtype={"code": str, "stock_code": str},
         )
     )
-    prices = prices.sort_values(["code", "date"]).reset_index(drop=True)
+    # 题目规定股票池以 universe.csv 为准，池外代码不参与训练与选股。
+    prices = prices[prices["code"].isin(set(universe["code"]))].copy()
+    if prices.empty:
+        raise ValueError("行情文件中没有与 universe.csv 匹配的股票代码，请检查代码格式（应为 6 位）")
+    prices = (
+        prices.drop_duplicates(subset=["date", "code"], keep="last")
+        .sort_values(["code", "date"])
+        .reset_index(drop=True)
+    )
 
     try:
         index = _normalize(pd.read_csv(_first_existing(data_dir, ["index.csv"])))
@@ -80,7 +98,8 @@ def load_data(data_dir: str | Path = "data") -> dict[str, pd.DataFrame]:
 
     try:
         calendar = pd.read_csv(data_dir / "calendar.csv")
-        calendar["trade_date"] = pd.to_datetime(calendar["trade_date"])
+        date_col = "trade_date" if "trade_date" in calendar.columns else "date"
+        calendar["trade_date"] = pd.to_datetime(calendar[date_col])
     except FileNotFoundError:
         calendar = pd.DataFrame({"trade_date": sorted(index["date"].unique())})
     return {"universe": universe, "prices": prices, "index": index, "calendar": calendar}
@@ -209,7 +228,12 @@ def build_dataset(data_dir: str | Path = "data", cache: bool = True) -> pd.DataF
     if cache and cache_path.exists():
         print("dataset cache is older than raw data, rebuilding")
     raw = load_data(data_dir)
+    last_date = raw["prices"]["date"].max()
     calendar = pd.DatetimeIndex(raw["calendar"]["trade_date"].sort_values().unique())
+    # 快照冻结在 T 日：交易日列表若带出 T 之后日期，也不能凭前值填充生成"假"行情。
+    calendar = calendar[calendar <= last_date]
+    if len(calendar) == 0:
+        calendar = pd.DatetimeIndex(sorted(raw["prices"]["date"].unique()))
     wide = to_wide(raw["prices"], calendar)
     long = build_features(wide, raw["index"])
     long = long.sort_values(["date", "code"]).reset_index(drop=True)

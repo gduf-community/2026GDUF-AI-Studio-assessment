@@ -19,11 +19,15 @@ def load_prediction(path: str) -> pd.DataFrame:
     if id_col is None or "weight" not in pred.columns:
         raise SystemExit("预测文件需包含 stock_id（或 stock_code）与 weight 两列")
     pred = pred.rename(columns={id_col: "stock_id"})
-    pred["stock_id"] = pred["stock_id"].astype(str).str.zfill(6)
+    pred["stock_id"] = pred["stock_id"].astype(str).str.strip()
+    bad = pred.loc[~pred["stock_id"].str.fullmatch(r"\d{6}"), "stock_id"].tolist()
+    if bad:
+        raise SystemExit(f"stock_id 必须是 6 位数字字符串（保留前导零），例如 {bad[:5]}")
     if pred["stock_id"].duplicated().any():
         raise SystemExit("预测文件存在重复股票代码")
     if len(pred) == 0 or len(pred) > MAX_STOCKS:
         raise SystemExit(f"预测文件需包含 1–{MAX_STOCKS} 只股票，实际 {len(pred)} 只")
+    pred["weight"] = pd.to_numeric(pred["weight"], errors="coerce")
     if pred["weight"].isna().any() or (pred["weight"] < 0).any():
         raise SystemExit("权重不能为空或负数")
     weight_sum = float(pred["weight"].sum())
