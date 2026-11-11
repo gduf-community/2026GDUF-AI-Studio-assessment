@@ -1,6 +1,11 @@
 # 数据快照（官方快照解压到 data/，不入库）
 data/
 
+# 样例数据的特征缓存与样例运行产物
+data_sample/dataset.pkl
+models_sample/
+reports_sample/
+
 # 训练产物、预测输出与提交文件
 models/
 output/*
