@@ -1,0 +1,41 @@
+{
+  "source": "公开行情：新浪财经日线（akshare stock_zh_a_daily，后复权）；指数为腾讯财经 sh000300；交易日历为新浪 tool_trade_date_hist_sina；成分股为 akshare index_stock_cons(000300)",
+  "adjust": "hfq（后复权）",
+  "cutoff": "2026-10-30",
+  "universe_size": 300,
+  "universe_asof": "2026-11-11",
+  "sample_stocks": 70,
+  "sample_rows": 149469,
+  "index_rows": 2140,
+  "calendar_rows": 2140,
+  "sample_note": "本目录仅为仓库内的部分真实样例（70 只成分股），用于跑通 baseline 与演示字段格式，不代表官方 300 只完整快照；完整 300 只数据由主办方快照提供，或由参赛者自行从公开源爬取，详见 README。",
+  "columns": {
+    "train.csv.gz": [
+      "stock_code",
+      "date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "amount",
+      "turnover"
+    ],
+    "universe.csv": [
+      "stock_code",
+      "stock_name"
+    ],
+    "index.csv": [
+      "date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "amount"
+    ],
+    "calendar.csv": [
+      "trade_date"
+    ]
+  }
+}
