@@ -5,7 +5,7 @@
 
 赛题形式对标大数据挑战赛：主办方提供截至 T 日的沪深300行情快照，参赛者在 T 日收盘后从 300 只成分股中最多选出 5 只、分配合计 100% 的权重，持有到 T+5。评分按组合收益计算，收益越高越好。
 
-本仓库是一个可直接运行的参考实现：LightGBM 预测未来 5 日收益，取预测最高的 5 只等权持有，并提供 5 日反转与随机选股两组对照。代码仅用于教学与对照，不构成投资建议。
+本目录（`baseline/`）是一个可直接运行的参考实现：LightGBM 预测未来 5 日收益，取预测最高的 5 只等权持有，并提供 5 日反转与随机选股两组对照。代码仅用于教学与对照，不构成投资建议。
 
 ## 任务口径
 
@@ -14,9 +14,19 @@
 - **提交内容**：最多 5 只股票，每只权重非负，权重合计为 1。
 - **评分**：`组合收益 = Σ 权重 × 个股收益`，同时给出组合相对全池等权平均的超额收益。单期结果波动很大，评定以多期滚动回测为主。
 
+与题目要求的对应关系：
+
+| 题目要求 | baseline 实现 |
+| --- | --- |
+| 股票池以 `universe.csv` 的 300 只为准 | `features.load_data` 按 `universe.csv` 过滤行情，池外代码不参与特征与选股 |
+| 只使用截至 T 日收盘可得的行情 | 特征均为当日及以前数据；`predict.py` 校验模型训练截止日早于预测日 |
+| 个股收益 `open(T+5) / open(T+1) - 1` | 标签 `fwd_ret_5` 与 `score.py` 使用同一口径 |
+| 最多 5 只、权重非负且合计为 1 | `predict.py` 输出 5 只等权（各 0.2），并在写出前校验 |
+| `result.csv` 为 6 位代码、UTF-8 | 代码统一 `zfill(6)`；`score.py` 再次校验格式、重复与权重 |
+
 ## 数据快照
 
-主办方提供 `data/`：
+主办方提供 `data/`（开发快照区间 2018-01-02 至 2026-10-30，评测快照延至 2026-12-04；均为 300 只成分股）：
 
 | 文件 | 内容 |
 | --- | --- |
@@ -26,7 +36,7 @@
 | `calendar.csv` | 交易日列表，`trade_date` |
 | `meta.json` | 数据来源、复权方式、截止日、股票数与行数 |
 
-快照已冻结在 T 日收盘，T 之后的价格不在文件内。`open` 为复权后价格，停牌日不产生记录，特征中的价格按前值填充，成交量、成交额、换手率记 0。
+每份快照均在自身最后交易日收盘后冻结，之后的价格不在文件内。`open` 为复权后价格，停牌日不产生记录，特征中的价格按前值填充，成交量、成交额、换手率记 0。股票池以 `universe.csv` 为准，池外代码会被过滤；本 baseline 只使用快照内数据，不引入外部行情。预测日默认取挂载快照最后一个有行情的交易日（开发快照为 2026-10-30，评测快照为 2026-12-04），无需手工指定，也不要把日期写死。
 
 ## 环境
 
@@ -38,7 +48,7 @@ pip install -r requirements.txt
 
 ## 本地运行
 
-以下命令均在仓库根目录执行，`T=2026-10-30` 为示例：
+以下命令均在本目录（`baseline/`）执行，命令中的 `2026-10-30` 为开发快照示例；评测时请改为挂载快照的最后交易日：
 
 ```bash
 # 1. 训练：按周采样，标签缩尾 ±30%
@@ -59,6 +69,8 @@ python src/backtest.py --data data --out reports
 
 首次运行会构建特征缓存 `data/dataset.pkl`（约 64 万行 × 45 列）。若数据目录只读，缓存写入失败会自动跳过，不影响运行。预测前会校验模型 `meta.json` 的训练截止日必须早于预测日，防止误用已看到未来价格的模型。
 
+`run.sh` 会先训练再预测，适合按容器入口一键跑完；分步运行可用 `./train.sh` 与 `./test.sh`（`test.sh` 需要 `models/` 已存在）。预测日默认取快照最后一个有行情的交易日，也可通过 `--date 2026-10-30` 或环境变量 `PREDICT_DATE` 显式指定。
+
 真值文件由主办方在测试窗口结束后生成，列为 `stock_code,actual_return`，覆盖全部 300 只股票。
 
 ## Docker 提交
@@ -66,14 +78,15 @@ python src/backtest.py --data data --out reports
 提交物是一个镜像 tar。镜像内只包含代码与依赖，`run.sh` 在评测时先训练再预测：
 
 ```bash
-# 构建（国内网络可追加镜像与 trusted-host）
-docker build -t hs300-top5:latest .
-docker build -t hs300-top5:latest . \
+# 构建（评测环境为 linux/amd64；Apple Silicon 等机器请显式指定平台）
+docker build --platform linux/amd64 -t hs300-top5:latest .
+# 国内网络可追加镜像与 trusted-host
+docker build --platform linux/amd64 -t hs300-top5:latest . \
   --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
   --build-arg "PIP_EXTRA=--trusted-host pypi.tuna.tsinghua.edu.cn"
 
 # 本地验证：数据只读挂载，输出写到 output/
-docker run --rm --network none \
+docker run --rm --network none --platform linux/amd64 \
   -v "$PWD/data:/app/data:ro" \
   -v "$PWD/output:/app/output" \
   -e DATA_DIR=/app/data -e MODEL_DIR=/app/models -e OUTPUT_DIR=/app/output \
@@ -88,7 +101,7 @@ docker save hs300-top5:latest -o team01.tar
 - 数据挂载在 `/app/data`（只读），结果写到 `/app/output/result.csv`；
 - 模型文件写在容器内，无需持久化；
 - 评测时无网络，训练与预测不得依赖外部接口；
-- 参考时限 8 小时；本基线在普通笔记本上训练约 20 秒、预测约 5 秒。
+- 参考资源 8 小时、16 GB 内存、10 核 CPU；本基线在普通笔记本上训练约 20 秒、预测约 5 秒。
 
 主办方批量评测：
 
@@ -101,7 +114,7 @@ python tools/run_container.py --tar team01.tar \
 
 ## 提交格式
 
-`result.csv`，UTF-8，两列，1–5 行：
+`result.csv`，UTF-8，两列，1–5 行（本 baseline 固定输出 5 行）：
 
 ```csv
 stock_id,weight
@@ -115,7 +128,9 @@ stock_id,weight
 约束：
 
 - `stock_id` 为 6 位字符串，保留前导零，不得重复；
-- `weight` 非负，合计为 1。
+- `weight` 非负且为数值，合计为 1。
+
+`src/predict.py` 写出前会校验行数、重复代码与权重合计；`src/score.py` 作为评分方还会校验 `stock_id` 必须严格为 6 位数字、权重非负且合计为 1。
 
 ## 方法
 
@@ -163,6 +178,8 @@ output/           预测结果（不入库）
 reports/          回测指标与明细（明细不入库）
 Dockerfile        提交镜像
 run.sh            容器入口：训练 + 预测
+train.sh          单独训练
+test.sh           单独预测（需已有模型）
 ```
 
 ## 复现性
